@@ -4,47 +4,18 @@ This project implements a serverless, event-driven pipeline on Azure to process 
 
 ## Architecture & Workflow
 
-## Trigger & Service Integration Flow
-
-```mermaid
-flowchart TD
-    U[User Uploads Document] -->|Blob Trigger| F1[doc_processing_func]\n(Azure Function)
-    F1 -->|Analyze| DI[Azure Document Intelligence]
-    DI -->|Extracted Data| F1
-    F1 -->|Prepare JSONL & Submit| OA[Azure OpenAI Batch API]
-    F1 -->|Track Job| S1[Azure Storage 'pending-jobs']
-    
-    T[Timer Trigger (Hourly)] --> F2[status_check_func\n(Azure Function)]
-    F2 -->|List Jobs| S1
-    F2 -->|Check Status| OA
-    OA -->|Results/Status| F2
-    F2 -->|If Completed: Retrieve Results| S2[Azure Storage 'completed-jobs']
-    F2 -->|If Failed/Expired: Move| S3[Azure Storage 'failed-jobs']
-    F2 -->|Send Comparison Result| Q[Azure Queue 'comparison-results']
-    
-    style U fill:#e0f7fa,stroke:#00796b,stroke-width:2px
-    style F1 fill:#fff9c4,stroke:#fbc02d,stroke-width:2px
-    style F2 fill:#fff9c4,stroke:#fbc02d,stroke-width:2px
-    style DI fill:#e1bee7,stroke:#8e24aa,stroke-width:2px
-    style OA fill:#bbdefb,stroke:#1976d2,stroke-width:2px
-    style S1 fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
-    style S2 fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
-    style S3 fill:#ffcdd2,stroke:#d32f2f,stroke-width:2px
-    style Q fill:#ffe0b2,stroke:#f57c00,stroke-width:2px
-```
-
 The pipeline consists of two main Azure Functions that work together asynchronously.
 
 ```mermaid
 graph TD
-    A[Upload Document to <br> 'uploads' Blob Container] --> B[doc_processing_func <br> Blob Trigger];
+    A[Upload Document to <br> 'uploads' Blob Container] --> B{doc_processing_func <br> (Blob Trigger)};
     B --> C[1. Analyze with <br> Document Intelligence];
     C --> D[2. Prepare JSONL <br> for Batch API];
     D --> E[3. Submit Job to <br> OpenAI Batch API];
     E --> F[4. Create Tracking Blob in <br> 'pending-jobs' Container];
 
-    G[status_check_func <br> Timer Trigger - Hourly] --> H[1. List Blobs in <br> 'pending-jobs'];
-    H --> I[For Each Job...];
+    G{status_check_func <br> (Timer Trigger - Hourly)} --> H[1. List Blobs in <br> 'pending-jobs'];
+    H --> I{For Each Job...};
     I --> J[2. Check Batch Job Status];
     J -- Completed --> K[3. Retrieve Results];
     J -- Failed/Expired --> L[Move Tracking Blob to 'failed-jobs'];
@@ -100,9 +71,12 @@ graph TD
 
 ```
 .
-├── app.py                  # Main file with both Azure Function definitions.
+├── function_app.py         # Main file with both Azure Function definitions.
 ├── models.py               # Pydantic models for data validation and structure.
-├── requirements.txt        # Python dependencies.
+├── pyproject.toml          # Project metadata, dependencies, and tool configuration.
+├── .pre-commit-config.yaml # Configuration for pre-commit hooks.
+├── setup.sh                # Setup script for Linux/macOS.
+├── setup.ps1               # Setup script for Windows.
 ├── host.json               # Host configuration for the Function App.
 ├── local.settings.json     # Local settings and connection strings (DO NOT COMMIT).
 └── README.md               # This file.
@@ -110,48 +84,46 @@ graph TD
 
 ## Setup and Configuration
 
-### Prerequisites
-*   Python 3.9+
-*   Azure Functions Core Tools
-*   An Azure subscription with access to create Storage Accounts, Document Intelligence, and Azure OpenAI resources.
+### Development Setup
 
-### Development Setup (Recommended)
+This project includes setup scripts to automate the creation of a virtual environment and installation of dependencies.
 
-This project is configured with Ruff and pre-commit for code linting and formatting. It also supports the `uv` package manager for fast environment and dependency management.
+1.  **Prerequisites**:
+    *   Python 3.9+
+    *   (Optional but recommended) `uv` for faster package management.
+    *   Azure Functions Core Tools.
 
-1.  **Install `uv`** (optional, but recommended):
-    Follow the official instructions to install `uv`: [https://github.com/astral-sh/uv#installation](https://github.com/astral-sh/uv#installation).
+2.  **Run the Setup Script**:
 
-2.  **Create a Virtual Environment**:
-    Using `uv`:
+    **For Linux/macOS:**
     ```bash
-    uv venv
+    # Make the script executable
+    chmod +x setup.sh
+    # Run the script
+    ./setup.sh
     ```
-    Using standard `venv`:
-    ```bash
-    python -m venv .venv
+
+    **For Windows (using PowerShell):**
+    You may need to adjust your execution policy to run the script.
+    ```powershell
+    # To allow the script to run in the current session
+    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+    # Run the script
+    .\setup.ps1
     ```
-    Activate the environment:
+    The script will create a virtual environment, install all necessary dependencies, and set up pre-commit hooks.
+
+3.  **Activate the Virtual Environment**:
+    After the setup script completes, activate the virtual environment for your shell session.
+
+    **For Linux/macOS:**
     ```bash
     source .venv/bin/activate
     ```
 
-3.  **Install Dependencies**:
-    Using `uv`:
-    ```bash
-    uv pip install -r requirements.txt
-    uv pip install -r requirements-dev.txt
-    ```
-    Using `pip`:
-    ```bash
-    pip install -r requirements.txt
-    pip install -r requirements-dev.txt
-    ```
-
-4.  **Set up Pre-commit Hooks**:
-    Install the git hooks to automatically lint and format your code before you commit.
-    ```bash
-    pre-commit install
+    **For Windows (PowerShell):**
+    ```powershell
+    .\.venv\Scripts\Activate.ps1
     ```
 
 ### Environment Variables

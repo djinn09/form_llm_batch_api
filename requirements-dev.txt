@@ -1,3 +1,0 @@
-# Development-specific dependencies
-ruff
-pre-commit
