@@ -1,0 +1,19 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "AzureWebJobsFeatureFlags": "EnableWorkerIndexing",
+    "DOCUMENT_INTELLIGENCE_ENDPOINT": "YOUR_DOCUMENT_INTELLIGENCE_ENDPOINT",
+    "DOCUMENT_INTELLIGENCE_KEY": "YOUR_DOCUMENT_INTELLIGENCE_KEY",
+    "OPENAI_API_KEY": "YOUR_OPENAI_API_KEY",
+    "OPENAI_ENDPOINT": "YOUR_OPENAI_ENDPOINT",
+    "STORAGE_CONNECTION_STRING": "YOUR_AZURE_STORAGE_CONNECTION_STRING",
+    "UPLOADS_CONTAINER_NAME": "uploads",
+    "BATCH_INPUTS_CONTAINER_NAME": "batch-inputs",
+    "PENDING_JOBS_CONTAINER_NAME": "pending-jobs",
+    "COMPLETED_JOBS_CONTAINER_NAME": "completed-jobs",
+    "FAILED_JOBS_CONTAINER_NAME": "failed-jobs",
+    "COMPARISON_RESULTS_QUEUE_NAME": "comparison-results"
+  }
+}
