@@ -8,7 +8,9 @@ class ChatRequestBody(BaseModel):
     model: str = "gpt-4o"
     messages: List[Dict[str, str]]
     temperature: float = 0.0
-    response_format: Optional[Dict[str, str]] = None
+    tools: Optional[List[Dict[str, Any]]] = None
+    tool_choice: Optional[str] = None
+
 
 class BatchRequest(BaseModel):
     """A single request object for the OpenAI Batch API."""
@@ -19,9 +21,24 @@ class BatchRequest(BaseModel):
 
 # --- Pydantic Models for Processing Batch Responses ---
 
+class FunctionCall(BaseModel):
+    """Represents the function call with arguments."""
+    arguments: str  # This will be a JSON string
+    name: str
+
+class ToolCall(BaseModel):
+    """Represents a tool call made by the model."""
+    id: str
+    function: FunctionCall
+    type: str
+
+classResponseMessage(BaseModel):
+    """The message object within a choice, containing tool calls."""
+    tool_calls: List[ToolCall]
+
 class ChatCompletionChoice(BaseModel):
     """Structure of a single choice in a chat completion response."""
-    message: Dict[str, Any]
+    message: ResponseMessage
 
 class ChatCompletionBody(BaseModel):
     """The 'body' of a successful response from the Batch API."""
@@ -42,7 +59,12 @@ class BatchResponse(BaseModel):
     error: Optional[Dict[str, Any]] = None
 
 
-# --- Pydantic Models for Downstream Processing ---
+# --- Pydantic Models for Application Logic ---
+
+class ExtractedData(BaseModel):
+    """The structured data we want OpenAI to extract."""
+    extracted_key: str = Field(description="The key extracted from the document text.")
+    extracted_value: str = Field(description="The value corresponding to the extracted key.")
 
 class ComparisonResult(BaseModel):
     """The final output message sent to the queue after processing."""

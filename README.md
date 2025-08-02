@@ -57,7 +57,7 @@ graph TD
 2.  **Document Processing (`doc_processing_func`)**:
     *   An Azure Function with a blob trigger is invoked.
     *   It sends the document to **Azure AI Document Intelligence** to extract key-value pairs.
-    *   The extracted data is transformed into a JSONL file formatted for the **OpenAI Batch API**. Each request is configured to ask for a structured JSON response for more reliable data extraction.
+    *   The extracted data is transformed into a JSONL file formatted for the **OpenAI Batch API**. Each request uses the `tools` parameter with a Pydantic-generated JSON schema to ensure a reliable, structured JSON output.
     *   The function uploads this JSONL file and creates a new batch job with OpenAI.
     *   To track the job, it creates a new entity in an **Azure Table** (`JobTracker`) with the batch ID and a 'pending' status.
 3.  **Status Check (`status_check_func`)**:

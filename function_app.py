@@ -7,7 +7,9 @@ from azure.core.credentials import AzureKeyCredential
 from azure.ai.documentintelligence import DocumentIntelligenceClient
 from azure.storage.blob import BlobServiceClient
 from azure.data.tables import TableServiceClient
-from models import BatchRequest, ChatRequestBody, BatchResponse, ComparisonResult
+from models import (
+    BatchRequest, ChatRequestBody, BatchResponse, ComparisonResult, ExtractedData
+)
 from thefuzz import fuzz
 
 # --- Configuration ---
@@ -46,19 +48,32 @@ def doc_processing_func(inputblob: func.InputStream):
         result = poller.result()
         logging.info(f"Document '{inputblob.name}' analyzed successfully.")
 
-        # 2. Prepare JSONL for Batch API
+        # 2. Prepare JSONL for Batch API using the 'tools' approach
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "extract_data",
+                    "description": "Extracts the key and value from a document field.",
+                    "parameters": ExtractedData.model_json_schema()
+                }
+            }
+        ]
+
         batch_requests = []
         if result.key_value_pairs:
             for i, item in enumerate(result.key_value_pairs):
                 if item.key and item.value:
                     custom_id = f"{inputblob.name}-{i}"
-                    prompt_message = f"From the following key-value pair, extract the key and value into a JSON object.\nKey: '{item.key.content}'\nValue: '{item.value.content}'"
+                    prompt_message = f"Please extract the key and value from the following text:\nKey: '{item.key.content}'\nValue: '{item.value.content}'"
+
                     chat_body = ChatRequestBody(
                         messages=[
-                            {"role": "system", "content": "You are an expert data extraction assistant. Always respond with a single, valid JSON object in the format: {\"extracted_key\": \"key\", \"extracted_value\": \"value\"}"},
+                            {"role": "system", "content": "You are a data extraction expert. Use the provided tool to extract structured data."},
                             {"role": "user", "content": prompt_message}
                         ],
-                        response_format={"type": "json_object"}
+                        tools=tools,
+                        tool_choice="auto"
                     )
                     batch_request = BatchRequest(custom_id=custom_id, body=chat_body)
                     batch_requests.append(batch_request.model_dump_json())
@@ -136,29 +151,28 @@ def status_check_func(myTimer: func.TimerRequest, outputQueue: func.Out[list[str
                     batch_response = BatchResponse.model_validate_json(line)
                     if batch_response.response and batch_response.response.body:
                         try:
-                            # The content is now a JSON string, so we need to parse it
-                            content_json_str = batch_response.response.body.choices[0].message.get('content', '{}')
-                            content_data = json.loads(content_json_str)
-                            extracted_text = content_data.get("extracted_value", "")
+                            tool_calls = batch_response.response.body.choices[0].message.tool_calls
+                            if tool_calls:
+                                tool_call = tool_calls[0]
+                                # The arguments are a JSON string, parse them into our Pydantic model
+                                extracted_data = ExtractedData.model_validate_json(tool_call.function.arguments)
+                                extracted_text = extracted_data.extracted_value
 
-                            if not extracted_text:
-                                logging.warning(f"No 'extracted_value' in JSON response for {batch_response.custom_id}")
-                                continue
+                                score = fuzz.ratio(existing_text_to_compare.lower(), extracted_text.lower())
 
-                            score = fuzz.ratio(existing_text_to_compare.lower(), extracted_text.lower())
+                                comparison_result = ComparisonResult(
+                                    document_field_id=batch_response.custom_id,
+                                    openai_extracted_text=extracted_text,
+                                    original_text_for_comparison=existing_text_to_compare,
+                                    fuzzy_match_score=score,
+                                    status="Processed - High Score" if score > 75 else "Processed - Low Score"
+                                )
+                                all_comparison_results.append(comparison_result.model_dump_json())
+                            else:
+                                logging.warning(f"No tool_calls found in the response for {batch_response.custom_id}")
 
-                            comparison_result = ComparisonResult(
-                                document_field_id=batch_response.custom_id,
-                                openai_extracted_text=extracted_text,
-                                original_text_for_comparison=existing_text_to_compare,
-                                fuzzy_match_score=score,
-                                status="Processed - High Score" if score > 75 else "Processed - Low Score"
-                            )
-                            all_comparison_results.append(comparison_result.model_dump_json())
-                        except json.JSONDecodeError as json_err:
-                            logging.error(f"Failed to decode JSON from response for {batch_response.custom_id}: {json_err}")
                         except Exception as e:
-                            logging.error(f"An unexpected error occurred while processing result for {batch_response.custom_id}: {e}")
+                            logging.error(f"An unexpected error occurred while processing tool_calls for {batch_response.custom_id}: {e}")
 
                 # Update entity status to 'completed'
                 job_entity["status"] = "completed"
