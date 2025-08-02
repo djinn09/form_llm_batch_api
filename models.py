@@ -8,6 +8,7 @@ class ChatRequestBody(BaseModel):
     model: str = "gpt-4o"
     messages: List[Dict[str, str]]
     temperature: float = 0.0
+    response_format: Optional[Dict[str, str]] = None
 
 class BatchRequest(BaseModel):
     """A single request object for the OpenAI Batch API."""
