@@ -4,18 +4,47 @@ This project implements a serverless, event-driven pipeline on Azure to process 
 
 ## Architecture & Workflow
 
+## Trigger & Service Integration Flow
+
+```mermaid
+flowchart TD
+    U[User Uploads Document] -->|Blob Trigger| F1[doc_processing_func]\n(Azure Function)
+    F1 -->|Analyze| DI[Azure Document Intelligence]
+    DI -->|Extracted Data| F1
+    F1 -->|Prepare JSONL & Submit| OA[Azure OpenAI Batch API]
+    F1 -->|Track Job| S1[Azure Storage 'pending-jobs']
+    
+    T[Timer Trigger (Hourly)] --> F2[status_check_func\n(Azure Function)]
+    F2 -->|List Jobs| S1
+    F2 -->|Check Status| OA
+    OA -->|Results/Status| F2
+    F2 -->|If Completed: Retrieve Results| S2[Azure Storage 'completed-jobs']
+    F2 -->|If Failed/Expired: Move| S3[Azure Storage 'failed-jobs']
+    F2 -->|Send Comparison Result| Q[Azure Queue 'comparison-results']
+    
+    style U fill:#e0f7fa,stroke:#00796b,stroke-width:2px
+    style F1 fill:#fff9c4,stroke:#fbc02d,stroke-width:2px
+    style F2 fill:#fff9c4,stroke:#fbc02d,stroke-width:2px
+    style DI fill:#e1bee7,stroke:#8e24aa,stroke-width:2px
+    style OA fill:#bbdefb,stroke:#1976d2,stroke-width:2px
+    style S1 fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
+    style S2 fill:#c8e6c9,stroke:#388e3c,stroke-width:2px
+    style S3 fill:#ffcdd2,stroke:#d32f2f,stroke-width:2px
+    style Q fill:#ffe0b2,stroke:#f57c00,stroke-width:2px
+```
+
 The pipeline consists of two main Azure Functions that work together asynchronously.
 
 ```mermaid
 graph TD
-    A[Upload Document to <br> 'uploads' Blob Container] --> B{doc_processing_func <br> (Blob Trigger)};
+    A[Upload Document to <br> 'uploads' Blob Container] --> B[doc_processing_func <br> Blob Trigger];
     B --> C[1. Analyze with <br> Document Intelligence];
     C --> D[2. Prepare JSONL <br> for Batch API];
     D --> E[3. Submit Job to <br> OpenAI Batch API];
     E --> F[4. Create Tracking Blob in <br> 'pending-jobs' Container];
 
-    G{status_check_func <br> (Timer Trigger - Hourly)} --> H[1. List Blobs in <br> 'pending-jobs'];
-    H --> I{For Each Job...};
+    G[status_check_func <br> Timer Trigger - Hourly] --> H[1. List Blobs in <br> 'pending-jobs'];
+    H --> I[For Each Job...];
     I --> J[2. Check Batch Job Status];
     J -- Completed --> K[3. Retrieve Results];
     J -- Failed/Expired --> L[Move Tracking Blob to 'failed-jobs'];
