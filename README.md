@@ -110,18 +110,53 @@ graph TD
 
 ## Setup and Configuration
 
-1.  **Prerequisites**:
-    *   Python 3.9+
-    *   Azure Functions Core Tools
-    *   An Azure subscription with access to create Storage Accounts, Document Intelligence, and Azure OpenAI resources.
+### Prerequisites
+*   Python 3.9+
+*   Azure Functions Core Tools
+*   An Azure subscription with access to create Storage Accounts, Document Intelligence, and Azure OpenAI resources.
 
-2.  **Install Dependencies**:
+### Development Setup (Recommended)
+
+This project is configured with Ruff and pre-commit for code linting and formatting. It also supports the `uv` package manager for fast environment and dependency management.
+
+1.  **Install `uv`** (optional, but recommended):
+    Follow the official instructions to install `uv`: [https://github.com/astral-sh/uv#installation](https://github.com/astral-sh/uv#installation).
+
+2.  **Create a Virtual Environment**:
+    Using `uv`:
     ```bash
-    pip install -r requirements.txt
+    uv venv
+    ```
+    Using standard `venv`:
+    ```bash
+    python -m venv .venv
+    ```
+    Activate the environment:
+    ```bash
+    source .venv/bin/activate
     ```
 
-3.  **Configure Environment Variables**:
-    Create a `local.settings.json` file (if it doesn't exist) and fill in the placeholder values.
+3.  **Install Dependencies**:
+    Using `uv`:
+    ```bash
+    uv pip install -r requirements.txt
+    uv pip install -r requirements-dev.txt
+    ```
+    Using `pip`:
+    ```bash
+    pip install -r requirements.txt
+    pip install -r requirements-dev.txt
+    ```
+
+4.  **Set up Pre-commit Hooks**:
+    Install the git hooks to automatically lint and format your code before you commit.
+    ```bash
+    pre-commit install
+    ```
+
+### Environment Variables
+
+Create a `local.settings.json` file (if it doesn't exist) and fill in the placeholder values.
 
     ```json
     {
@@ -145,11 +180,12 @@ graph TD
     }
     ```
 
-4.  **Create Azure Resources**:
-    Ensure you have the following resources created in your Azure subscription:
-    *   **Azure Storage Account**: Create the following containers: `uploads`, `batch-inputs`, `pending-jobs`, `completed-jobs`, `failed-jobs`. Also, create the `comparison-results` queue.
-    *   **Azure AI Document Intelligence** service.
-    *   **Azure OpenAI** service with a model deployed (e.g., `gpt-4o`).
+### Azure Resources
+
+Ensure you have the following resources created in your Azure subscription:
+*   **Azure Storage Account**: Create the following containers: `uploads`, `batch-inputs`, `pending-jobs`, `completed-jobs`, `failed-jobs`. Also, create the `comparison-results` queue.
+*   **Azure AI Document Intelligence** service.
+*   **Azure OpenAI** service with a model deployed (e.g., `gpt-4o`).
 
 ## How to Run Locally
 

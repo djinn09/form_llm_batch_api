@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "azure_document_processing_pipeline"
+version = "0.1.0"
+authors = [
+  { name="Jules", email="jules@example.com" },
+]
+description = "An Azure Functions pipeline for processing documents with AI services."
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "W", "I"]
+
+[tool.ruff.lint]
+# Enable Pyflakes, pycodestyle, and isort.
+select = ["E", "F", "W", "I"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
