@@ -21,6 +21,7 @@ dependencies = [
     "azure-storage-blob",
     "azure-storage-queue",
     "azure-ai-documentintelligence",
+    "azure-data-tables",
     "openai",
     "pydantic",
     "thefuzz",

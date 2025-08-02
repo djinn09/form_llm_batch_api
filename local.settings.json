@@ -11,9 +11,7 @@
     "STORAGE_CONNECTION_STRING": "YOUR_AZURE_STORAGE_CONNECTION_STRING",
     "UPLOADS_CONTAINER_NAME": "uploads",
     "BATCH_INPUTS_CONTAINER_NAME": "batch-inputs",
-    "PENDING_JOBS_CONTAINER_NAME": "pending-jobs",
-    "COMPLETED_JOBS_CONTAINER_NAME": "completed-jobs",
-    "FAILED_JOBS_CONTAINER_NAME": "failed-jobs",
+    "JOB_TRACKER_TABLE_NAME": "JobTracker",
     "COMPARISON_RESULTS_QUEUE_NAME": "comparison-results"
   }
 }

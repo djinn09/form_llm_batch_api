@@ -12,18 +12,18 @@ graph TD
     B --> C[1. Analyze with <br> Document Intelligence];
     C --> D[2. Prepare JSONL <br> for Batch API];
     D --> E[3. Submit Job to <br> OpenAI Batch API];
-    E --> F[4. Create Tracking Blob in <br> 'pending-jobs' Container];
+    E --> F[(4. Create Record in <br> JobTracker Table)];
 
-    G{status_check_func <br> (Timer Trigger - Hourly)} --> H[1. List Blobs in <br> 'pending-jobs'];
+    G{status_check_func <br> (Timer Trigger - Hourly)} --> H[1. Query JobTracker Table <br> for 'pending' jobs];
     H --> I{For Each Job...};
     I --> J[2. Check Batch Job Status];
     J -- Completed --> K[3. Retrieve Results];
-    J -- Failed/Expired --> L[Move Tracking Blob to 'failed-jobs'];
+    J -- Failed/Expired --> L[Update Job Status to 'failed'];
     J -- In Progress --> M[Do Nothing];
 
     K --> N[4. Perform Fuzzy <br> String Comparison];
     N --> O[5. Send Result to <br> 'comparison-results' Queue];
-    O --> P[6. Move Tracking Blob to 'completed-jobs'];
+    O --> P[6. Update Job Status to 'completed'];
 
     subgraph "Input"
         A
@@ -56,16 +56,16 @@ graph TD
 1.  **Trigger**: The process begins when a document (e.g., PDF, JPG, PNG) is uploaded to the `uploads` blob storage container.
 2.  **Document Processing (`doc_processing_func`)**:
     *   An Azure Function with a blob trigger is invoked.
-    *   It sends the document to **Azure AI Document Intelligence** to extract key-value pairs using the `prebuilt-document` model.
-    *   The extracted data is transformed into a JSONL (JSON Lines) file, where each line is a separate request formatted for the **OpenAI Batch API**.
-    *   The function uploads this JSONL file to OpenAI's file service and creates a new batch job.
-    *   To track the job, a small blob named after the `batch_id` is created in the `pending-jobs` container.
+    *   It sends the document to **Azure AI Document Intelligence** to extract key-value pairs.
+    *   The extracted data is transformed into a JSONL file formatted for the **OpenAI Batch API**.
+    *   The function uploads this JSONL file and creates a new batch job with OpenAI.
+    *   To track the job, it creates a new entity in an **Azure Table** (`JobTracker`) with the batch ID and a 'pending' status.
 3.  **Status Check (`status_check_func`)**:
     *   An Azure Function with a timer trigger runs every hour.
-    *   It lists all blobs in the `pending-jobs` container to find active jobs.
-    *   For each job, it queries the OpenAI Batch API for the status.
-    *   **If Completed**: It retrieves the results, performs a fuzzy string comparison on the extracted text against a sample string, and creates a structured result message using a Pydantic model. This result is then sent to the `comparison-results` Azure Queue. The tracking blob is moved to the `completed-jobs` container.
-    *   **If Failed/Expired**: The tracking blob is moved to the `failed-jobs` container for later inspection.
+    *   It queries the `JobTracker` table for all jobs with a 'pending' status.
+    *   For each job, it queries the OpenAI Batch API.
+    *   **If Completed**: It retrieves the results, performs a fuzzy string comparison, and sends a structured result message to the `comparison-results` Azure Queue. It then updates the job's status in the table to 'completed'.
+    *   **If Failed/Expired**: It updates the job's status in the table to 'failed'.
 
 ## Project Structure
 
@@ -144,9 +144,7 @@ Create a `local.settings.json` file (if it doesn't exist) and fill in the placeh
         "STORAGE_CONNECTION_STRING": "YOUR_FULL_AZURE_STORAGE_CONNECTION_STRING",
         "UPLOADS_CONTAINER_NAME": "uploads",
         "BATCH_INPUTS_CONTAINER_NAME": "batch-inputs",
-        "PENDING_JOBS_CONTAINER_NAME": "pending-jobs",
-        "COMPLETED_JOBS_CONTAINER_NAME": "completed-jobs",
-        "FAILED_JOBS_CONTAINER_NAME": "failed-jobs",
+        "JOB_TRACKER_TABLE_NAME": "JobTracker",
         "COMPARISON_RESULTS_QUEUE_NAME": "comparison-results"
       }
     }
@@ -155,7 +153,10 @@ Create a `local.settings.json` file (if it doesn't exist) and fill in the placeh
 ### Azure Resources
 
 Ensure you have the following resources created in your Azure subscription:
-*   **Azure Storage Account**: Create the following containers: `uploads`, `batch-inputs`, `pending-jobs`, `completed-jobs`, `failed-jobs`. Also, create the `comparison-results` queue.
+*   **Azure Storage Account**:
+    *   **Blob Containers**: `uploads`, `batch-inputs`.
+    *   **Queue**: `comparison-results`.
+    *   **Table**: `JobTracker` (or the name you specify in settings).
 *   **Azure AI Document Intelligence** service.
 *   **Azure OpenAI** service with a model deployed (e.g., `gpt-4o`).
 
