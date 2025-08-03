@@ -32,6 +32,9 @@ dependencies = [
 dev = [
     "ruff",
     "pre-commit",
+    "pytest",
+    "pytest-mock",
+    "hypothesis",
 ]
 
 [tool.ruff]
