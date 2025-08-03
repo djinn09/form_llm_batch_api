@@ -35,11 +35,16 @@ dev = [
 ]
 
 [tool.ruff]
-line-length = 88
-select = ["E", "F", "W", "I"]
+line-length = 120
+select = ["ALL"]
+ignore = [
+   "PGH003",
+   "G004",
+   "ANN401"
+]
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I"]
+select = ["ALL"]
 
 [tool.ruff.format]
 quote-style = "double"
