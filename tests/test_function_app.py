@@ -1,10 +1,19 @@
-import pytest
+"""Unit tests for the function_app module, including batch request preparation and blob content downloading."""
+
 from unittest.mock import MagicMock
 
+import pytest
+
+from models import BatchRequest
+
+
 @pytest.fixture(autouse=True)
-def mock_env_vars(monkeypatch, mocker):
+def mock_env_vars(monkeypatch: pytest.MonkeyPatch, mocker: pytest.MockFixture) -> None:
     """Mock environment variables and service clients for all tests in this module."""
-    monkeypatch.setenv("STORAGE_CONNECTION_STRING", "DefaultEndpointsProtocol=https;AccountName=dummy;AccountKey=dummy;EndpointSuffix=core.windows.net")
+    monkeypatch.setenv(
+        "STORAGE_CONNECTION_STRING",
+        "DefaultEndpointsProtocol=https;AccountName=dummy;AccountKey=dummy;EndpointSuffix=core.windows.net",
+    )
     monkeypatch.setenv("DOCUMENT_INTELLIGENCE_ENDPOINT", "https://dummy.cognitiveservices.azure.com/")
     monkeypatch.setenv("DOCUMENT_INTELLIGENCE_KEY", "dummy_key")
     monkeypatch.setenv("OPENAI_ENDPOINT", "https://dummy.openai.azure.com/")
@@ -18,32 +27,33 @@ def mock_env_vars(monkeypatch, mocker):
     mocker.patch("azure.storage.queue.QueueServiceClient.from_connection_string")
 
 
-from models import ChatRequestBody, BatchRequest
-
 # A mock result object that simulates the structure of DocumentIntelligenceClient's result
 class MockKeyValue:
-    def __init__(self, key, value):
+    def __init__(self, key, value) -> None:
+        """Initialize a MockKeyValue with a key and value."""
         self.key = MagicMock()
         self.key.content = key
         self.value = MagicMock()
         self.value.content = value
 
+
 class MockDocumentAnalysisResult:
-    def __init__(self, key_value_pairs):
+    def __init__(self, key_value_pairs) -> None:
         self.key_value_pairs = key_value_pairs
 
-def test_prepare_batch_requests_with_data():
-    """
-    Test that prepare_batch_requests correctly formats data from a
+
+def test_prepare_batch_requests_with_data() -> None:
+    """Test that prepare_batch_requests correctly formats data from a
     DocumentAnalysisResult into OpenAI Batch API requests.
     """
     from function_app import prepare_batch_requests
+
     # Arrange: Create a mock analysis result with some key-value pairs
     mock_result = MockDocumentAnalysisResult(
         key_value_pairs=[
             MockKeyValue("Name", "Jules"),
             MockKeyValue("Company", "ACME Inc."),
-        ]
+        ],
     )
     blob_name = "test_document.pdf"
 
@@ -67,12 +77,13 @@ def test_prepare_batch_requests_with_data():
     assert "Key: 'Company'" in req2.body.messages[1]["content"]
     assert "Value: 'ACME Inc.'" in req2.body.messages[1]["content"]
 
-def test_prepare_batch_requests_with_no_data():
-    """
-    Test that prepare_batch_requests returns an empty list when the
+
+def test_prepare_batch_requests_with_no_data() -> None:
+    """Test that prepare_batch_requests returns an empty list when the
     document analysis result has no key-value pairs.
     """
     from function_app import prepare_batch_requests
+
     # Arrange: Create a mock analysis result with no key-value pairs
     mock_result = MockDocumentAnalysisResult(key_value_pairs=[])
     blob_name = "empty_document.pdf"
@@ -83,11 +94,11 @@ def test_prepare_batch_requests_with_no_data():
     # Assert: The result should be an empty list
     assert len(batch_requests) == 0
 
-def test_download_blob_content_success(mocker):
-    """
-    Test that download_blob_content successfully downloads and returns blob content.
-    """
+
+def test_download_blob_content_success(mocker) -> None:
+    """Test that download_blob_content successfully downloads and returns blob content."""
     from function_app import download_blob_content
+
     # Arrange: Mock the ContainerClient and its methods
     mock_container_client = MagicMock()
     mock_blob_client = MagicMock()
@@ -106,11 +117,10 @@ def test_download_blob_content_success(mocker):
     mock_blob_client.download_blob.assert_called_once()
 
 
-def test_download_blob_content_failure(mocker):
-    """
-    Test that download_blob_content returns None when a download error occurs.
-    """
+def test_download_blob_content_failure(mocker) -> None:
+    """Test that download_blob_content returns None when a download error occurs."""
     from function_app import download_blob_content
+
     # Arrange: Mock the ContainerClient to raise an exception
     mock_container_client = MagicMock()
     mock_container_client.get_blob_client.side_effect = Exception("Test Exception")
