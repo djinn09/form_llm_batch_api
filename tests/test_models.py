@@ -1,18 +1,15 @@
-import pytest
-from pydantic import ValidationError
-from hypothesis import given, strategies as st
+"""Tests for the Pydantic models."""
+
+from typing import Any, Callable
+
+from hypothesis import given
+from hypothesis import strategies as st
+
 from models import (
-    ChatRequestBody,
     BatchRequest,
-    ExtractedData,
+    ChatRequestBody,
     ComparisonResult,
-    FunctionCall,
-    ToolCall,
-    ResponseMessage,
-    ChatCompletionChoice,
-    ChatCompletionBody,
-    ResponseInfo,
-    BatchResponse,
+    ExtractedData,
 )
 
 # --- Hypothesis Strategies for Model Fields ---
@@ -24,7 +21,7 @@ message_strategy = st.lists(
         values=st.text(),
         min_size=2,
         max_size=2,
-    )
+    ),
 )
 
 # A strategy for generating a list of tools
@@ -34,13 +31,15 @@ tool_strategy = st.lists(
         values=st.text(),  # Simplified for now
         min_size=2,
         max_size=2,
-    )
+    ),
 )
 
 # --- Hypothesis Strategies for Pydantic Models ---
 
+
 @st.composite
-def chat_request_body_strategy(draw):
+def chat_request_body_strategy(draw: Callable[..., Any]) -> ChatRequestBody:
+    """Generate a `ChatRequestBody` instance."""
     return ChatRequestBody(
         model=draw(st.text()),
         messages=draw(message_strategy),
@@ -49,8 +48,10 @@ def chat_request_body_strategy(draw):
         tool_choice=draw(st.one_of(st.none(), st.text())),
     )
 
+
 @st.composite
-def batch_request_strategy(draw):
+def batch_request_strategy(draw: Callable[..., Any]) -> BatchRequest:
+    """Generate a `BatchRequest` instance."""
     return BatchRequest(
         custom_id=draw(st.text()),
         method=draw(st.sampled_from(["POST"])),
@@ -58,15 +59,19 @@ def batch_request_strategy(draw):
         body=draw(chat_request_body_strategy()),
     )
 
+
 @st.composite
-def extracted_data_strategy(draw):
+def extracted_data_strategy(draw: Callable[..., Any]) -> ExtractedData:
+    """Generate an `ExtractedData` instance."""
     return ExtractedData(
         extracted_key=draw(st.text()),
         extracted_value=draw(st.text()),
     )
 
+
 @st.composite
-def comparison_result_strategy(draw):
+def comparison_result_strategy(draw: Callable[..., Any]) -> ComparisonResult:
+    """Generate a `ComparisonResult` instance."""
     return ComparisonResult(
         document_field_id=draw(st.text()),
         openai_extracted_text=draw(st.text()),
@@ -76,31 +81,36 @@ def comparison_result_strategy(draw):
         error_message=draw(st.one_of(st.none(), st.text())),
     )
 
+
 # --- Pytest Tests ---
 
+
 @given(data=chat_request_body_strategy())
-def test_chat_request_body_serialization(data):
+def test_chat_request_body_serialization(data: ChatRequestBody) -> None:
     """Test that ChatRequestBody can be serialized and deserialized."""
     json_data = data.model_dump_json()
     new_data = ChatRequestBody.model_validate_json(json_data)
     assert data == new_data
 
+
 @given(data=batch_request_strategy())
-def test_batch_request_serialization(data):
+def test_batch_request_serialization(data: BatchRequest) -> None:
     """Test that BatchRequest can be serialized and deserialized."""
     json_data = data.model_dump_json()
     new_data = BatchRequest.model_validate_json(json_data)
     assert data == new_data
 
+
 @given(data=extracted_data_strategy())
-def test_extracted_data_serialization(data):
+def test_extracted_data_serialization(data: ExtractedData) -> None:
     """Test that ExtractedData can be serialized and deserialized."""
     json_data = data.model_dump_json()
     new_data = ExtractedData.model_validate_json(json_data)
     assert data == new_data
 
+
 @given(data=comparison_result_strategy())
-def test_comparison_result_serialization(data):
+def test_comparison_result_serialization(data: ComparisonResult) -> None:
     """Test that ComparisonResult can be serialized and deserialized."""
     json_data = data.model_dump_json()
     new_data = ComparisonResult.model_validate_json(json_data)

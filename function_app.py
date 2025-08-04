@@ -1,5 +1,4 @@
-"""
-Azure Function App for Document Processing and OpenAI Batch Orchestration.
+"""Azure Function App for Document Processing and OpenAI Batch Orchestration.
 
 This script defines two main Azure Functions triggered by timers:
 1. `doc_processing_func`: This function runs periodically to process documents.
@@ -110,8 +109,7 @@ def analyze_document(
     blob_bytes: bytes,
     blob_name: str,
 ) -> object | None:
-    """
-    Analyzes a document using Azure Document Intelligence.
+    """Analyze a document using Azure Document Intelligence.
 
     Args:
         client: The Document Intelligence client.
@@ -120,6 +118,7 @@ def analyze_document(
 
     Returns:
         The analysis result object if successful, otherwise None.
+
     """
     try:
         # Start the analysis process
@@ -130,19 +129,19 @@ def analyze_document(
         )
         # Wait for the analysis to complete
         result = poller.result()
-        logger.info(f"Document '{blob_name}' analyzed successfully.")
-        return result
     except Exception:
         logger.exception(f"Error analyzing document '{blob_name}'")
         return None
+    else:
+        logger.info(f"Document '{blob_name}' analyzed successfully.")
+        return result
 
 
 def download_blob_content(
     container_client: ContainerClient,
     blob_name: str,
 ) -> bytes | None:
-    """
-    Downloads the content of a blob from Azure Storage.
+    """Download the content of a blob from Azure Storage.
 
     Args:
         container_client: The client for the blob container.
@@ -150,23 +149,24 @@ def download_blob_content(
 
     Returns:
         The blob content as bytes if successful, otherwise None.
+
     """
     try:
         blob_client = container_client.get_blob_client(blob_name)
         blob_bytes = blob_client.download_blob().readall()
-        logger.info(f"Downloaded blob '{blob_name}' successfully.")
-        return blob_bytes
     except Exception:
         logger.exception(f"Error downloading blob '{blob_name}'")
         return None
+    else:
+        logger.info(f"Downloaded blob '{blob_name}' successfully.")
+        return blob_bytes
 
 
 def prepare_batch_requests(
     result: Any,
     blob_name: str,
 ) -> list[str]:
-    """
-    Prepares a list of JSONL strings for the OpenAI Batch API.
+    """Prepare a list of JSONL strings for the OpenAI Batch API.
 
     This function iterates through the key-value pairs extracted by Document
     Intelligence and formats them into individual requests for the OpenAI Batch API.
@@ -177,6 +177,7 @@ def prepare_batch_requests(
 
     Returns:
         A list of JSON strings, where each string is a single batch request.
+
     """
     tools = [
         {
@@ -206,7 +207,9 @@ def prepare_batch_requests(
                     messages=[
                         {
                             "role": "system",
-                            "content": "You are a data extraction expert. Use the provided tool to extract structured data.",
+                            "content": (
+                                "You are a data extraction expert. Use the provided tool to extract structured data."
+                            ),
                         },
                         {"role": "user", "content": prompt_message},
                     ],
@@ -230,8 +233,7 @@ def upload_file_to_openai(
     batch_input_filename: str,
     jsonl_content: str,
 ) -> Any:
-    """
-    Uploads a JSONL file to OpenAI for batch processing.
+    """Upload a JSONL file to OpenAI for batch processing.
 
     Args:
         batch_input_filename: The name of the file to be created in OpenAI.
@@ -239,6 +241,7 @@ def upload_file_to_openai(
 
     Returns:
         The OpenAI file object upon successful upload.
+
     """
     openai_file = openai_client.files.create(
         file=(batch_input_filename, jsonl_content.encode("utf-8")),
@@ -251,14 +254,14 @@ def upload_file_to_openai(
 def create_openai_batch_job(
     openai_file_id: str,
 ) -> Any:
-    """
-    Creates a new batch job in OpenAI.
+    """Create a new batch job in OpenAI.
 
     Args:
         openai_file_id: The ID of the file previously uploaded to OpenAI.
 
     Returns:
         The OpenAI batch job object.
+
     """
     batch_job = openai_client.batches.create(
         input_file_id=openai_file_id,
@@ -275,8 +278,7 @@ def create_tracking_entity(
     batch_job_id: str,
     blob_name: str,
 ) -> None:
-    """
-    Creates a tracking entity in Azure Table Storage for the batch job.
+    """Create a tracking entity in Azure Table Storage for the batch job.
 
     This entity stores the job's status and links it back to the original document.
 
@@ -285,6 +287,7 @@ def create_tracking_entity(
         base_blob_name: The base name of the blob, used as the PartitionKey.
         batch_job_id: The ID of the OpenAI batch job, used as the RowKey.
         blob_name: The full name of the original document blob.
+
     """
     tracking_entity: dict[str, str] = {
         "PartitionKey": base_blob_name,
@@ -301,8 +304,7 @@ def create_tracking_entity(
 # =================================================================================
 @app.timer_trigger(schedule="0 */10 * * * *", arg_name="my_timer", run_on_startup=True)
 def doc_processing_func() -> None:
-    """
-    Timer-triggered function to process documents from the uploads queue.
+    """Timer-triggered function to process documents from the uploads queue.
 
     This function runs every 10 minutes, picks messages from the queue, and
     orchestrates the document analysis and OpenAI batch job creation process.
@@ -333,8 +335,7 @@ def pick_messages_from_queue(
     queue_client: QueueClient,
     count: int,
 ) -> list[QueueMessage]:
-    """
-    Picks a specified number of messages from an Azure Queue.
+    """Pick a specified number of messages from an Azure Queue.
 
     Args:
         queue_client: The client for the Azure Queue.
@@ -342,6 +343,7 @@ def pick_messages_from_queue(
 
     Returns:
         A list of queue messages.
+
     """
     messages = queue_client.receive_messages(messages_per_page=count)
     return [msg for msg_page in messages.by_page() for msg in msg_page]
@@ -354,8 +356,7 @@ def process_queue_message(
     dead_letter_queue_client: QueueClient,
     table_client: TableClient,
 ) -> None:
-    """
-    Processes a single message from the uploads queue.
+    """Process a single message from the uploads queue.
 
     This involves downloading the document, analyzing it, creating a batch job,
     and handling success or failure cases.
@@ -366,6 +367,7 @@ def process_queue_message(
         uploads_queue_client: The client for the main uploads queue.
         dead_letter_queue_client: The client for the dead-letter queue.
         table_client: The client for the job tracker table.
+
     """
     message_content = msg.content
     logger.info(f"Processing document: {message_content}")
@@ -414,12 +416,12 @@ def upload_jsonl_to_blob(
     batch_input_filename: str,
     jsonl_content: str,
 ) -> None:
-    """
-    Uploads the generated JSONL file to Azure Blob Storage for archival.
+    """Upload the generated JSONL file to Azure Blob Storage for archival.
 
     Args:
         batch_input_filename: The name for the blob.
         jsonl_content: The JSONL content string to upload.
+
     """
     batch_input_blob_client = blob_service_client.get_blob_client(
         container=BATCH_INPUTS_CONTAINER_NAME,
@@ -441,8 +443,7 @@ def upload_jsonl_to_blob(
 def status_check_func(
     output_queue: func.Out[list[str]],
 ) -> None:
-    """
-    Timer-triggered function to check batch job statuses and output results.
+    """Timer-triggered function to check batch job statuses and output results.
 
     This function runs once per hour, queries for 'pending' jobs in Table Storage,
     checks their status via the OpenAI API, and processes them if they are completed,
@@ -450,11 +451,12 @@ def status_check_func(
 
     Args:
         output_queue: An output binding to send comparison results to another queue.
+
     """
     logger.info("Status check function executed.")
     table_client = table_service_client.get_table_client(table_name=JOB_TRACKER_TABLE_NAME)
 
-    # TODO: Replace with a proper mechanism to get original data for comparison
+    # TODO(jules): #123 Replace with a proper mechanism to get original data for comparison  # noqa: FIX002
     existing_data = {"sampel": "amsmdskm"}
     existing_text_to_compare = next(iter(existing_data.values()))
 
@@ -502,8 +504,7 @@ def process_completed_job(
     existing_text: str,
     table_client: TableClient,
 ) -> list[str]:
-    """
-    Processes a completed OpenAI batch job.
+    """Process a completed OpenAI batch job.
 
     This involves downloading the output file, parsing the results, performing
     fuzzy string matching, and updating the job's status in Table Storage.
@@ -516,6 +517,7 @@ def process_completed_job(
 
     Returns:
         A list of JSON strings representing the comparison results.
+
     """
     comparison_results: list[str] = []
     output_file_id = batch_job.output_file_id
@@ -570,8 +572,7 @@ def process_completed_job(
 
 
 def handle_failed_job(batch_job: Any, job_entity: dict, table_client: TableClient) -> None:
-    """
-    Handles a batch job that has failed, been cancelled, or expired.
+    """Handle a batch job that has failed, been cancelled, or expired.
 
     This function updates the job's status in Table Storage to 'failed' and
     logs the reason.
@@ -580,6 +581,7 @@ def handle_failed_job(batch_job: Any, job_entity: dict, table_client: TableClien
         batch_job: The failed/cancelled/expired OpenAI batch job object.
         job_entity: The corresponding entity from Azure Table Storage.
         table_client: The client for the Azure Table.
+
     """
     logger.error(
         "Batch job %s has status: %s. Marking as failed.",
