@@ -110,7 +110,7 @@ def analyze_document(
     blob_bytes: bytes,
     blob_name: str,
 ) -> object | None:
-    """Analyzes a document using Azure Document Intelligence.
+    """Analyze a document using Azure Document Intelligence.
 
     Args:
     ----
@@ -122,6 +122,7 @@ def analyze_document(
     -------
         The analysis result object if successful, otherwise None.
 
+
     """
     try:
         # Start the analysis process
@@ -132,18 +133,19 @@ def analyze_document(
         )
         # Wait for the analysis to complete
         result = poller.result()
-        logger.info(f"Document '{blob_name}' analyzed successfully.")
-        return result
     except Exception:
         logger.exception(f"Error analyzing document '{blob_name}'")
         return None
+    else:
+        logger.info(f"Document '{blob_name}' analyzed successfully.")
+        return result
 
 
 def download_blob_content(
     container_client: ContainerClient,
     blob_name: str,
 ) -> bytes | None:
-    """Downloads the content of a blob from Azure Storage.
+    """Download the content of a blob from Azure Storage.
 
     Args:
     ----
@@ -158,11 +160,12 @@ def download_blob_content(
     try:
         blob_client = container_client.get_blob_client(blob_name)
         blob_bytes = blob_client.download_blob().readall()
-        logger.info(f"Downloaded blob '{blob_name}' successfully.")
-        return blob_bytes
     except Exception:
         logger.exception(f"Error downloading blob '{blob_name}'")
         return None
+    else:
+        logger.info(f"Downloaded blob '{blob_name}' successfully.")
+        return blob_bytes
 
 
 def prepare_batch_requests(
@@ -212,7 +215,9 @@ def prepare_batch_requests(
                     messages=[
                         {
                             "role": "system",
-                            "content": "You are a data extraction expert. Use the provided tool to extract structured data.",
+                            "content": (
+                                "You are a data extraction expert. Use the provided tool to extract structured data."
+                            ),
                         },
                         {"role": "user", "content": prompt_message},
                     ],
@@ -469,7 +474,7 @@ def status_check_func(
     logger.info("Status check function executed.")
     table_client = table_service_client.get_table_client(table_name=JOB_TRACKER_TABLE_NAME)
 
-    # TODO: Replace with a proper mechanism to get original data for comparison
+    # TODO(jules): #123 Replace with a proper mechanism to get original data for comparison  # noqa: FIX002
     existing_data = {"sampel": "amsmdskm"}
     existing_text_to_compare = next(iter(existing_data.values()))
 
