@@ -26,6 +26,7 @@ dependencies = [
     "pydantic",
     "thefuzz",
     "python-Levenshtein",
+    "pytest>=8.4.1",
 ]
 
 [project.optional-dependencies]

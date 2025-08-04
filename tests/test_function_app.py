@@ -53,7 +53,7 @@ def test_prepare_batch_requests_with_data() -> None:
 
     A DocumentAnalysisResult is formatted into OpenAI Batch API requests.
     """
-    from function_app import prepare_batch_requests  # noqa: PLC0415
+    from function_app import prepare_batch_requests
 
     # Arrange: Create a mock analysis result with some key-value pairs
     mock_key_value_pairs = [
@@ -90,7 +90,7 @@ def test_prepare_batch_requests_with_no_data() -> None:
 
     When the document analysis result has no key-value pairs, the list is empty.
     """
-    from function_app import prepare_batch_requests  # noqa: PLC0415
+    from function_app import prepare_batch_requests
 
     # Arrange: Create a mock analysis result with no key-value pairs
     mock_result = MockDocumentAnalysisResult(key_value_pairs=[])
@@ -105,7 +105,7 @@ def test_prepare_batch_requests_with_no_data() -> None:
 
 def test_download_blob_content_success() -> None:
     """Test that download_blob_content successfully downloads and returns blob content."""
-    from function_app import download_blob_content  # noqa: PLC0415
+    from function_app import download_blob_content
 
     # Arrange: Mock the ContainerClient and its methods
     mock_container_client = MagicMock()
@@ -127,7 +127,7 @@ def test_download_blob_content_success() -> None:
 
 def test_download_blob_content_failure() -> None:
     """Test that download_blob_content returns None when a download error occurs."""
-    from function_app import download_blob_content  # noqa: PLC0415
+    from function_app import download_blob_content
 
     # Arrange: Mock the ContainerClient to raise an exception
     mock_container_client = MagicMock()

@@ -104,6 +104,7 @@ logger = logging.getLogger(__name__)
 # HELPER FUNCTIONS for Document Processing
 # =================================================================================
 
+
 def analyze_document(
     client: DocumentIntelligenceClient,
     blob_bytes: bytes,
@@ -112,12 +113,15 @@ def analyze_document(
     """Analyze a document using Azure Document Intelligence.
 
     Args:
+    ----
         client: The Document Intelligence client.
         blob_bytes: The document content as bytes.
         blob_name: The name of the blob being analyzed (for logging).
 
     Returns:
+    -------
         The analysis result object if successful, otherwise None.
+
 
     """
     try:
@@ -144,10 +148,12 @@ def download_blob_content(
     """Download the content of a blob from Azure Storage.
 
     Args:
+    ----
         container_client: The client for the blob container.
         blob_name: The name of the blob to download.
 
     Returns:
+    -------
         The blob content as bytes if successful, otherwise None.
 
     """
@@ -172,10 +178,12 @@ def prepare_batch_requests(
     Intelligence and formats them into individual requests for the OpenAI Batch API.
 
     Args:
+    ----
         result: The result from the Document Intelligence analysis.
         blob_name: The name of the original blob, used to create unique custom IDs.
 
     Returns:
+    -------
         A list of JSON strings, where each string is a single batch request.
 
     """
@@ -236,10 +244,12 @@ def upload_file_to_openai(
     """Upload a JSONL file to OpenAI for batch processing.
 
     Args:
+    ----
         batch_input_filename: The name of the file to be created in OpenAI.
         jsonl_content: The content of the JSONL file as a string.
 
     Returns:
+    -------
         The OpenAI file object upon successful upload.
 
     """
@@ -257,9 +267,11 @@ def create_openai_batch_job(
     """Create a new batch job in OpenAI.
 
     Args:
+    ----
         openai_file_id: The ID of the file previously uploaded to OpenAI.
 
     Returns:
+    -------
         The OpenAI batch job object.
 
     """
@@ -283,6 +295,7 @@ def create_tracking_entity(
     This entity stores the job's status and links it back to the original document.
 
     Args:
+    ----
         table_client: The client for the Azure Table.
         base_blob_name: The base name of the blob, used as the PartitionKey.
         batch_job_id: The ID of the OpenAI batch job, used as the RowKey.
@@ -338,10 +351,12 @@ def pick_messages_from_queue(
     """Pick a specified number of messages from an Azure Queue.
 
     Args:
+    ----
         queue_client: The client for the Azure Queue.
         count: The maximum number of messages to retrieve.
 
     Returns:
+    -------
         A list of queue messages.
 
     """
@@ -362,6 +377,7 @@ def process_queue_message(
     and handling success or failure cases.
 
     Args:
+    ----
         msg: The queue message to process.
         uploads_container_client: The client for the uploads blob container.
         uploads_queue_client: The client for the main uploads queue.
@@ -419,6 +435,7 @@ def upload_jsonl_to_blob(
     """Upload the generated JSONL file to Azure Blob Storage for archival.
 
     Args:
+    ----
         batch_input_filename: The name for the blob.
         jsonl_content: The JSONL content string to upload.
 
@@ -450,6 +467,7 @@ def status_check_func(
     failed, or expired.
 
     Args:
+    ----
         output_queue: An output binding to send comparison results to another queue.
 
     """
@@ -510,12 +528,14 @@ def process_completed_job(
     fuzzy string matching, and updating the job's status in Table Storage.
 
     Args:
+    ----
         batch_job: The completed OpenAI batch job object.
         job_entity: The corresponding entity from Azure Table Storage.
         existing_text: The text to compare against the extracted text.
         table_client: The client for the Azure Table.
 
     Returns:
+    -------
         A list of JSON strings representing the comparison results.
 
     """
@@ -578,6 +598,7 @@ def handle_failed_job(batch_job: Any, job_entity: dict, table_client: TableClien
     logs the reason.
 
     Args:
+    ----
         batch_job: The failed/cancelled/expired OpenAI batch job object.
         job_entity: The corresponding entity from Azure Table Storage.
         table_client: The client for the Azure Table.
