@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 from pytest_mock import MockerFixture
 
+from function_app import download_blob_content, prepare_batch_requests
 from models import BatchRequest
 
 
@@ -49,12 +50,11 @@ class MockDocumentAnalysisResult:
 
 
 def test_prepare_batch_requests_with_data() -> None:
-    """Test that prepare_batch_requests correctly formats data.
+    """
+    Test that prepare_batch_requests correctly formats data.
 
     A DocumentAnalysisResult is formatted into OpenAI Batch API requests.
     """
-    from function_app import prepare_batch_requests
-
     # Arrange: Create a mock analysis result with some key-value pairs
     mock_key_value_pairs = [
         MockKeyValue("Name", "Jules"),
@@ -86,12 +86,11 @@ def test_prepare_batch_requests_with_data() -> None:
 
 
 def test_prepare_batch_requests_with_no_data() -> None:
-    """Test that prepare_batch_requests returns an empty list.
+    """
+    Test that prepare_batch_requests returns an empty list.
 
     When the document analysis result has no key-value pairs, the list is empty.
     """
-    from function_app import prepare_batch_requests
-
     # Arrange: Create a mock analysis result with no key-value pairs
     mock_result = MockDocumentAnalysisResult(key_value_pairs=[])
     blob_name = "empty_document.pdf"
@@ -105,8 +104,6 @@ def test_prepare_batch_requests_with_no_data() -> None:
 
 def test_download_blob_content_success() -> None:
     """Test that download_blob_content successfully downloads and returns blob content."""
-    from function_app import download_blob_content
-
     # Arrange: Mock the ContainerClient and its methods
     mock_container_client = MagicMock()
     mock_blob_client = MagicMock()
@@ -127,8 +124,6 @@ def test_download_blob_content_success() -> None:
 
 def test_download_blob_content_failure() -> None:
     """Test that download_blob_content returns None when a download error occurs."""
-    from function_app import download_blob_content
-
     # Arrange: Mock the ContainerClient to raise an exception
     mock_container_client = MagicMock()
     mock_container_client.get_blob_client.side_effect = Exception("Test Exception")
