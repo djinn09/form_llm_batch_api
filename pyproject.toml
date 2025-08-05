@@ -40,15 +40,17 @@ dev = [
 
 [tool.ruff]
 line-length = 120
+
+[tool.ruff.lint]
 select = ["ALL"]
 ignore = [
    "PGH003",
    "G004",
-   "ANN401"
+   "ANN401",
+   "D203",
+   "D212"
 ]
-
-[tool.ruff.lint]
-select = ["ALL"]
+per-file-ignores = { "tests/*.py" = ["S101"] }
 
 [tool.ruff.format]
 quote-style = "double"
