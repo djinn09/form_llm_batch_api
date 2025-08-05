@@ -37,6 +37,11 @@ dev = [
     "pytest-mock",
     "hypothesis",
 ]
+test = [
+    "pytest",
+    "pytest-mock",
+    "hypothesis",
+]
 
 [tool.ruff]
 line-length = 120
@@ -60,3 +65,6 @@ line-ending = "auto"
 
 [tool.setuptools.packages.find]
 include = ["function_app", "models"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
