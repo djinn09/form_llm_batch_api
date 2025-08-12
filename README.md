@@ -8,22 +8,22 @@ The pipeline consists of two main Azure Functions that work together asynchronou
 
 ```mermaid
 graph TD
-    A[Upload Document to <br> 'uploads' Blob Container] --> B{doc_processing_func <br> (Blob Trigger)};
-    B --> C[1. Analyze with <br> Document Intelligence];
-    C --> D[2. Prepare JSONL <br> for Batch API];
-    D --> E[3. Submit Job to <br> OpenAI Batch API];
-    E --> F[(4. Create Record in <br> JobTracker Table)];
+    A["Upload Document to\n'uploads' Blob Container"] --> B{"doc_processing_func\n(Blob Trigger)"};
+    B --> C["1. Analyze with\nDocument Intelligence"];
+    C --> D["2. Prepare JSONL\nfor Batch API"];
+    D --> E["3. Submit Job to\nOpenAI Batch API"];
+    E --> F[("(4) Create Record in\nJobTracker Table")];
 
-    G{status_check_func <br> (Timer Trigger - Hourly)} --> H[1. Query JobTracker Table <br> for 'pending' jobs];
-    H --> I{For Each Job...};
-    I --> J[2. Check Batch Job Status];
-    J -- Completed --> K[3. Retrieve Results];
-    J -- Failed/Expired --> L[Update Job Status to 'failed'];
-    J -- In Progress --> M[Do Nothing];
+    G{"status_check_func\n(Timer Trigger - Hourly)"} --> H["1. Query JobTracker Table\nfor 'pending' jobs"];
+    H --> I{"For Each Job..."};
+    I --> J["2. Check Batch Job Status"];
+    J -- Completed --> K["3. Retrieve Results"];
+    J -- Failed/Expired --> L["Update Job Status to 'failed'"];
+    J -- In Progress --> M["Do Nothing"];
 
-    K --> N[4. Perform Fuzzy <br> String Comparison];
-    N --> O[5. Send Result to <br> 'comparison-results' Queue];
-    O --> P[6. Update Job Status to 'completed'];
+    K --> N["4. Perform Fuzzy\nString Comparison"];
+    N --> O["5. Send Result to\n'comparison-results' Queue"];
+    O --> P["6. Update Job Status to 'completed'"];
 
     subgraph "Input"
         A
