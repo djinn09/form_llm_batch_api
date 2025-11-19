@@ -1,3 +1,6 @@
+# pyproject.toml
+# Ultra-Strict Python Project Template
+
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
@@ -5,49 +8,106 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "azure_document_processing_pipeline"
 version = "0.1.0"
-authors = [
-  { name="Jules", email="jules@example.com" },
-]
 description = "An Azure Functions pipeline for processing documents with AI services."
+authors = [{ name = "Jules", email = "jules@example.com" }]
+license = { text = "MIT" }
 readme = "README.md"
-requires-python = ">=3.9"
-license = {text = "MIT"}  # Replaces deprecated classifier
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Operating System :: OS Independent",
-]
+requires-python = ">=3.12"
 dependencies = [
+    "pydantic>=2.0.0",
+    "types-requests",
+    "python-dotenv",
+    "typing-extensions>=4.12",
     "azure-functions",
     "azure-storage-blob",
     "azure-storage-queue",
     "azure-ai-documentintelligence",
     "azure-data-tables",
     "openai",
-    "pydantic",
     "thefuzz",
     "python-Levenshtein",
 ]
 
 [project.optional-dependencies]
 dev = [
+    "basedpyright>=1.31.7",
     "ruff",
+    "gitingest",
+    "poethepoet",
+    "radon",
+    "skylos",
     "pre-commit",
     "pytest",
+    "pytest-cov",
+    "coverage",
     "pytest-mock",
     "hypothesis",
 ]
 
-[tool.ruff]
-line-length = 120
-select = ["ALL"]
-ignore = [
-   "PGH003",
-   "G004",
-   "ANN401"
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["*"]
+exclude = ["tests*", "scripts*", "docs*", "examples*"]
+
+[tool.poe.tasks]
+format = [
+    {cmd = "ruff format ."},
+    {cmd = "ruff check . --fix"},
+    {cmd = "basedpyright --level error"}
+]
+check = [
+    {cmd = "ruff check ."},
+    {cmd = "basedpyright --level error"}
+]
+lint = {cmd = "ruff check . --fix"}
+lint-unsafe = {cmd = "ruff check . --fix --unsafe-fixes"}
+metrics = [
+    {cmd = "skylos . --quality"},
+    {cmd = "radon cc . -a -nb"},
+    {cmd = "radon mi . -nb"}
+]
+quality = [
+    {cmd = "ruff format ."},
+    {cmd = "ruff check . --fix"},
+    {cmd = "basedpyright --level error"},
+    {cmd = "radon cc . -a -nb"},
+    {cmd = "skylos . --quality --danger"},
 ]
 
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+indent-width = 4
+fix = true
+show-fixes = true
+preview = true
+
 [tool.ruff.lint]
-select = ["ALL"]
+select = [
+    "E","F","I","UP","B","BLE","C4","C90","T20","SIM","N","Q","RUF","ASYNC","S","PTH","ERA","PL","PERF","ANN","ARG","FBT","RET","TCH"
+]
+ignore = ["E501", "S603", "S607"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.pylint]
+max-nested-blocks = 3
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/**/*.py" = ["S101", "PLR2004", "ANN", "FBT"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["function_app", "models"]
+combine-as-imports = true
+force-sort-within-sections = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.flake8-type-checking]
+strict = true
 
 [tool.ruff.format]
 quote-style = "double"
@@ -55,5 +115,125 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
 
-[tool.setuptools.packages.find]
-include = ["function_app", "models"]
+[tool.basedpyright]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+reportMissingImports = true
+reportMissingTypeStubs = true
+reportUndefinedVariable = true
+reportAssertAlwaysTrue = true
+reportInvalidStringEscapeSequence = true
+reportOptionalSubscript = true
+reportOptionalMemberAccess = true
+reportOptionalCall = true
+reportOptionalIterable = true
+reportOptionalContextManager = true
+reportOptionalOperand = true
+reportAny = true
+reportExplicitAny = true
+reportIgnoreCommentWithoutRule = false
+reportPrivateLocalImportUsage = true
+reportUnnecessaryTypeAnnotation = true
+reportMissingParameterType = true
+reportMissingTypeArgument = true
+reportUnknownParameterType = true
+reportUnknownLambdaType = true
+reportUnknownArgumentType = true
+reportUnknownVariableType = true
+reportUnknownMemberType = true
+reportUntypedFunctionDecorator = true
+reportUntypedClassDecorator = true
+reportUntypedBaseClass = true
+reportUntypedNamedTuple = true
+reportIncompatibleMethodOverride = true
+reportIncompatibleVariableOverride = true
+reportInconsistentConstructor = true
+reportUninitializedInstanceVariable = true
+reportOverlappingOverload = true
+reportMissingSuperCall = true
+reportPrivateUsage = true
+reportConstantRedefinition = true
+reportInvalidStubStatement = true
+reportIncompleteStub = true
+reportUnsupportedDunderAll = true
+reportUnusedClass = "error"
+reportUnusedFunction = "error"
+reportUnusedVariable = "error"
+reportUnusedImport = "error"
+reportDuplicateImport = "error"
+reportUnnecessaryIsInstance = "error"
+reportUnnecessaryCast = "error"
+reportUnnecessaryComparison = "error"
+reportUnnecessaryContains = "error"
+reportUnnecessaryTypeIgnoreComment = "error"
+reportGeneralTypeIssues = true
+reportPropertyTypeMismatch = true
+reportFunctionMemberAccess = true
+reportCallInDefaultInitializer = true
+reportImplicitStringConcatenation = true
+reportImplicitOverride = true
+reportShadowedImports = true
+reportDeprecated = "warning"
+reportImportCycles = "warning"
+
+exclude = [
+    "**/__pycache__",
+    "**/node_modules",
+    ".git",
+    ".mypy_cache",
+    ".pyright_cache",
+    ".ruff_cache",
+    ".pytest_cache",
+    ".venv",
+    "venv",
+    "env",
+    "logs",
+    "output",
+    "data",
+    "build",
+    "dist",
+    "*.egg-info",
+]
+
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-W error",
+    "--tb=short",
+    "--cov=.",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-report=html",
+    "--cov-report=xml",
+    "--cov-fail-under=40",
+]
+filterwarnings = ["error"]
+markers = ["slow", "integration", "unit"]
+
+[tool.coverage.run]
+source = ["."]
+branch = true
+omit = ["*/tests/*", "*/test_*.py", "*/__pycache__/*", "*/.venv/*", "*/venv/*", "*/scripts/*"]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+fail_under = 40
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+    "@overload",
+]
