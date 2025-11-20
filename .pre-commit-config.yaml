@@ -36,6 +36,27 @@ repos:
         name: Check for added large files
         description: "Check for files that are too large"
 
+      - id: fix-byte-order-marker
+      - id: mixed-line-ending
+      - id: name-tests-test
+        args: [--pytest-test-first]
+      - id: no-commit-to-branch
+
+  - repo: https://github.com/streetsidesoftware/cspell-cli
+    rev: v8.0.0
+    hooks:
+      - id: cspell
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.6
+    hooks:
+      - id: bandit
+
+  - repo: https://github.com/pycqa/doc8
+    rev: v1.1.1
+    hooks:
+      - id: doc8
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.12.8
     hooks:

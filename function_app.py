@@ -20,14 +20,14 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
 
-import azure.functions as func
 from azure.ai.documentintelligence import DocumentIntelligenceClient
 from azure.core.credentials import AzureKeyCredential
-from azure.data.tables import TableClient, TableServiceClient
-from azure.storage.blob import BlobServiceClient, ContainerClient
-from azure.storage.queue import QueueClient, QueueMessage, QueueServiceClient
+from azure.data.tables import TableServiceClient
+import azure.functions as func
+from azure.storage.blob import BlobServiceClient
+from azure.storage.queue import QueueServiceClient
 from openai import AzureOpenAI
 from thefuzz import fuzz
 
@@ -38,6 +38,13 @@ from models import (
     ComparisonResult,
     ExtractedData,
 )
+
+if TYPE_CHECKING:
+    from azure.ai.documentintelligence.models import AnalyzeResult
+    from azure.data.tables import TableClient
+    from azure.storage.blob import ContainerClient
+    from azure.storage.queue import QueueClient, QueueMessage
+    from openai.types import Batch, FileObject
 
 # --- Configuration ---
 # Load environment variables to configure the application's connection strings,
@@ -72,8 +79,12 @@ FUZZY_MATCH_SCORE_THRESHOLD = 75
 # configuration. These clients are reused across function invocations.
 
 # Azure Blob Storage client
-blob_service_client = BlobServiceClient.from_connection_string(STORAGE_CONNECTION_STRING)
-uploads_container_client = blob_service_client.get_container_client(UPLOADS_CONTAINER_NAME)
+blob_service_client = BlobServiceClient.from_connection_string(
+    STORAGE_CONNECTION_STRING
+)
+uploads_container_client = blob_service_client.get_container_client(
+    UPLOADS_CONTAINER_NAME
+)
 
 # Azure Document Intelligence client
 document_intelligence_client = DocumentIntelligenceClient(
@@ -82,7 +93,9 @@ document_intelligence_client = DocumentIntelligenceClient(
 )
 
 # Azure Table Storage client
-table_service_client = TableServiceClient.from_connection_string(conn_str=STORAGE_CONNECTION_STRING)
+table_service_client = TableServiceClient.from_connection_string(
+    conn_str=STORAGE_CONNECTION_STRING
+)
 
 # Azure OpenAI client
 openai_client = AzureOpenAI(
@@ -92,7 +105,9 @@ openai_client = AzureOpenAI(
 )
 
 # Azure Queue Storage clients
-queue_service_client = QueueServiceClient.from_connection_string(STORAGE_CONNECTION_STRING)
+queue_service_client = QueueServiceClient.from_connection_string(
+    STORAGE_CONNECTION_STRING
+)
 uploads_queue_client = queue_service_client.get_queue_client(QUEUE_NAME)
 dead_letter_queue_client = queue_service_client.get_queue_client(DEAD_LETTER_QUEUE_NAME)
 
@@ -104,6 +119,7 @@ logger = logging.getLogger(__name__)
 # =================================================================================
 # HELPER FUNCTIONS for Document Processing
 # =================================================================================
+
 
 def analyze_document(
     client: DocumentIntelligenceClient,
@@ -162,7 +178,7 @@ def download_blob_content(
 
 
 def prepare_batch_requests(
-    result: Any,
+    result: AnalyzeResult,
     blob_name: str,
 ) -> list[str]:
     """
@@ -192,7 +208,12 @@ def prepare_batch_requests(
     batch_requests: list[str] = []
     if hasattr(result, "key_value_pairs") and result.key_value_pairs:
         for i, item in enumerate(result.key_value_pairs):
-            if hasattr(item, "key") and hasattr(item, "value") and item.key and item.value:
+            if (
+                hasattr(item, "key")
+                and hasattr(item, "value")
+                and item.key
+                and item.value
+            ):
                 # Create a unique ID for each key-value pair to track it through the process
                 custom_id = f"{blob_name}-{i}"
                 prompt_message = (
@@ -229,7 +250,7 @@ def prepare_batch_requests(
 def upload_file_to_openai(
     batch_input_filename: str,
     jsonl_content: str,
-) -> Any:
+) -> FileObject:
     """
     Uploads a JSONL file to OpenAI for batch processing.
 
@@ -250,7 +271,7 @@ def upload_file_to_openai(
 
 def create_openai_batch_job(
     openai_file_id: str,
-) -> Any:
+) -> Batch:
     """
     Creates a new batch job in OpenAI.
 
@@ -310,7 +331,9 @@ def doc_processing_func() -> None:
     logger.info("Timer triggered document processing function.")
     # Ensure the job tracker table exists before proceeding
     table_service_client.create_table_if_not_exists(JOB_TRACKER_TABLE_NAME)
-    table_client = table_service_client.get_table_client(table_name=JOB_TRACKER_TABLE_NAME)
+    table_client = table_service_client.get_table_client(
+        table_name=JOB_TRACKER_TABLE_NAME
+    )
 
     # Fetch a batch of messages from the queue
     picked_messages = pick_messages_from_queue(uploads_queue_client, WIN_PICK_COUNT)
@@ -373,19 +396,27 @@ def process_queue_message(
         # Step 1: Download the document from blob storage
         blob_bytes = download_blob_content(uploads_container_client, message_content)
         if blob_bytes is None:
-            logger.error(f"Failed to download blob '{message_content}'. Moving to dead-letter queue.")
+            logger.error(
+                f"Failed to download blob '{message_content}'. Moving to dead-letter queue."
+            )
             dead_letter_queue_client.send_message(msg.content)
             uploads_queue_client.delete_message(msg)
             return
 
         # Step 2: Analyze the document with Document Intelligence
-        result = analyze_document(document_intelligence_client, blob_bytes, message_content)
+        result = analyze_document(
+            document_intelligence_client, blob_bytes, message_content
+        )
 
         # Step 3: Prepare requests for the OpenAI Batch API
         batch_requests = prepare_batch_requests(result, message_content)
         if not batch_requests:
-            logger.warning(f"No key-value pairs found in document '{message_content}'. Nothing to process.")
-            uploads_queue_client.delete_message(msg)  # Successfully processed, no further action
+            logger.warning(
+                f"No key-value pairs found in document '{message_content}'. Nothing to process."
+            )
+            uploads_queue_client.delete_message(
+                msg
+            )  # Successfully processed, no further action
             return
 
         # Step 4: Create and upload the JSONL file for the batch job
@@ -399,13 +430,17 @@ def process_queue_message(
         batch_job = create_openai_batch_job(openai_file.id)
 
         # Step 6: Create a tracking entity in Table Storage
-        create_tracking_entity(table_client, base_blob_name, batch_job.id, message_content)
+        create_tracking_entity(
+            table_client, base_blob_name, batch_job.id, message_content
+        )
 
         # Step 7: Delete the original message from the queue
         uploads_queue_client.delete_message(msg)
 
     except Exception:
-        logger.exception(f"An error occurred processing blob '{msg.content}'. Moving to dead-letter queue.")
+        logger.exception(
+            f"An error occurred processing blob '{msg.content}'. Moving to dead-letter queue."
+        )
         dead_letter_queue_client.send_message(msg.content)
         uploads_queue_client.delete_message(msg)
 
@@ -452,7 +487,9 @@ def status_check_func(
         output_queue: An output binding to send comparison results to another queue.
     """
     logger.info("Status check function executed.")
-    table_client = table_service_client.get_table_client(table_name=JOB_TRACKER_TABLE_NAME)
+    table_client = table_service_client.get_table_client(
+        table_name=JOB_TRACKER_TABLE_NAME
+    )
 
     # TODO: Replace with a proper mechanism to get original data for comparison
     existing_data = {"sampel": "amsmdskm"}
@@ -471,9 +508,11 @@ def status_check_func(
 
             if batch_job.status == "completed":
                 logger.info("Batch job %s completed. Processing results.", batch_id)
-                results = process_completed_job(batch_job, job_entity, existing_text_to_compare, table_client)
+                results = process_completed_job(
+                    batch_job, job_entity, existing_text_to_compare, table_client
+                )
                 all_comparison_results.extend(results)
-            elif batch_job.status in ["failed", "expired", "cancelling", "cancelled"]:
+            elif batch_job.status in {"failed", "expired", "cancelling", "cancelled"}:
                 handle_failed_job(batch_job, job_entity, table_client)
             else:
                 # Job is still running, do nothing and check again later
@@ -493,11 +532,13 @@ def status_check_func(
     # If there were any completed jobs, send the comparison results to the output queue
     if all_comparison_results:
         output_queue.set(all_comparison_results)
-        logger.info("Sent %d comparison results to the queue.", len(all_comparison_results))
+        logger.info(
+            "Sent %d comparison results to the queue.", len(all_comparison_results)
+        )
 
 
 def process_completed_job(
-    batch_job: Any,
+    batch_job: Batch,
     job_entity: dict,
     existing_text: str,
     table_client: TableClient,
@@ -519,48 +560,19 @@ def process_completed_job(
     """
     comparison_results: list[str] = []
     output_file_id = batch_job.output_file_id
-    if output_file_id is not None:
+
+    if output_file_id is None:
+        logger.error("Batch job completed but no output_file_id found.")
+    else:
         # Download the content of the output file from OpenAI
         result_content = openai_client.files.content(output_file_id).read()
         result_lines = result_content.decode("utf-8").strip().split("\n")
 
         # Process each line in the output file
         for line in result_lines:
-            batch_response = BatchResponse.model_validate_json(line)
-            if batch_response.response and batch_response.response.body:
-                try:
-                    tool_calls = batch_response.response.body.choices[0].message.tool_calls
-                    if tool_calls:
-                        # Extract the data from the tool call
-                        tool_call = tool_calls[0]
-                        extracted_data = ExtractedData.model_validate_json(tool_call.function.arguments)
-                        extracted_text = extracted_data.extracted_value
-
-                        # Perform fuzzy matching
-                        score = fuzz.ratio(existing_text.lower(), extracted_text.lower())
-
-                        # Create a result object
-                        comparison_result = ComparisonResult(
-                            document_field_id=batch_response.custom_id,
-                            openai_extracted_text=extracted_text,
-                            original_text_for_comparison=existing_text,
-                            fuzzy_match_score=score,
-                            status=(
-                                "Processed - High Score"
-                                if score > FUZZY_MATCH_SCORE_THRESHOLD
-                                else "Processed - Low Score"
-                            ),
-                            error_message="",
-                        )
-                        comparison_results.append(comparison_result.model_dump_json())
-                    else:
-                        logger.warning("No tool_calls found in the response for %s", batch_response.custom_id)
-                except Exception:
-                    logger.exception("Error processing tool_calls for %s", batch_response.custom_id)
-            else:
-                logger.error("Batch job completed but no valid response body found for %s.", batch_response.custom_id)
-    else:
-        logger.error("Batch job completed but no output_file_id found.")
+            result = process_batch_result_line(line, existing_text)
+            if result:
+                comparison_results.append(result)
 
     # Update the job status to 'completed' in Table Storage
     job_entity["status"] = "completed"
@@ -569,7 +581,54 @@ def process_completed_job(
     return comparison_results
 
 
-def handle_failed_job(batch_job: Any, job_entity: dict, table_client: TableClient) -> None:
+def process_batch_result_line(line: str, existing_text: str) -> str | None:
+    """Processes a single line from the batch output file."""
+    batch_response = BatchResponse.model_validate_json(line)
+    if not (batch_response.response and batch_response.response.body):
+        logger.error(
+            "Batch job completed but no valid response body found for %s.",
+            batch_response.custom_id,
+        )
+        return None
+
+    try:
+        tool_calls = batch_response.response.body.choices[0].message.tool_calls
+        if not tool_calls:
+            logger.warning(
+                "No tool_calls found in the response for %s", batch_response.custom_id
+            )
+            return None
+
+        # Extract the data from the tool call
+        tool_call = tool_calls[0]
+        extracted_data = ExtractedData.model_validate_json(tool_call.function.arguments)
+        extracted_text = extracted_data.extracted_value
+
+        # Perform fuzzy matching
+        score = fuzz.ratio(existing_text.lower(), extracted_text.lower())
+
+        # Create a result object
+        comparison_result = ComparisonResult(
+            document_field_id=batch_response.custom_id,
+            openai_extracted_text=extracted_text,
+            original_text_for_comparison=existing_text,
+            fuzzy_match_score=score,
+            status=(
+                "Processed - High Score"
+                if score > FUZZY_MATCH_SCORE_THRESHOLD
+                else "Processed - Low Score"
+            ),
+            error_message="",
+        )
+        return comparison_result.model_dump_json()
+    except Exception:
+        logger.exception("Error processing tool_calls for %s", batch_response.custom_id)
+        return None
+
+
+def handle_failed_job(
+    batch_job: Batch, job_entity: dict, table_client: TableClient
+) -> None:
     """
     Handles a batch job that has failed, been cancelled, or expired.
 
