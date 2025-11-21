@@ -1,11 +1,38 @@
-import pytest
+import os
+
+# Set environment variables before importing function_app to avoid KeyErrors
+os.environ.setdefault(
+    "STORAGE_CONNECTION_STRING",
+    "DefaultEndpointsProtocol=https;AccountName=dummy;AccountKey=dummy;EndpointSuffix=core.windows.net",
+)
+os.environ.setdefault(
+    "DOCUMENT_INTELLIGENCE_ENDPOINT", "https://dummy.cognitiveservices.azure.com/"
+)
+os.environ.setdefault("DOCUMENT_INTELLIGENCE_KEY", "dummy_key")
+os.environ.setdefault("OPENAI_ENDPOINT", "https://dummy.openai.azure.com/")
+os.environ.setdefault("OPENAI_API_KEY", "dummy_openai_key")
+
+from dataclasses import dataclass
+from typing import Any
 from unittest.mock import MagicMock
 
+import pytest
+from pytest_mock import MockerFixture
+
+from function_app import download_blob_content, prepare_batch_requests
+from models import BatchRequest
+
+
 @pytest.fixture(autouse=True)
-def mock_env_vars(monkeypatch, mocker):
+def mock_env_vars(monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture) -> None:
     """Mock environment variables and service clients for all tests in this module."""
-    monkeypatch.setenv("STORAGE_CONNECTION_STRING", "DefaultEndpointsProtocol=https;AccountName=dummy;AccountKey=dummy;EndpointSuffix=core.windows.net")
-    monkeypatch.setenv("DOCUMENT_INTELLIGENCE_ENDPOINT", "https://dummy.cognitiveservices.azure.com/")
+    monkeypatch.setenv(
+        "STORAGE_CONNECTION_STRING",
+        "DefaultEndpointsProtocol=https;AccountName=dummy;AccountKey=dummy;EndpointSuffix=core.windows.net",
+    )
+    monkeypatch.setenv(
+        "DOCUMENT_INTELLIGENCE_ENDPOINT", "https://dummy.cognitiveservices.azure.com/"
+    )
     monkeypatch.setenv("DOCUMENT_INTELLIGENCE_KEY", "dummy_key")
     monkeypatch.setenv("OPENAI_ENDPOINT", "https://dummy.openai.azure.com/")
     monkeypatch.setenv("OPENAI_API_KEY", "dummy_openai_key")
@@ -18,28 +45,27 @@ def mock_env_vars(monkeypatch, mocker):
     mocker.patch("azure.storage.queue.QueueServiceClient.from_connection_string")
 
 
-from models import ChatRequestBody, BatchRequest
-
 # A mock result object that simulates the structure of DocumentIntelligenceClient's result
 class MockKeyValue:
-    def __init__(self, key, value):
-        self.key = MagicMock()
+    def __init__(self, key: str, value: str) -> None:
+        self.key: Any = MagicMock()
         self.key.content = key
-        self.value = MagicMock()
+        self.value: Any = MagicMock()
         self.value.content = value
 
-class MockDocumentAnalysisResult:
-    def __init__(self, key_value_pairs):
-        self.key_value_pairs = key_value_pairs
 
-def test_prepare_batch_requests_with_data():
+@dataclass
+class MockDocumentAnalysisResult:
+    key_value_pairs: list[MockKeyValue]
+
+
+def test_prepare_batch_requests_with_data() -> None:
     """
     Test that prepare_batch_requests correctly formats data from a
     DocumentAnalysisResult into OpenAI Batch API requests.
     """
-    from function_app import prepare_batch_requests
     # Arrange: Create a mock analysis result with some key-value pairs
-    mock_result = MockDocumentAnalysisResult(
+    mock_result: Any = MockDocumentAnalysisResult(
         key_value_pairs=[
             MockKeyValue("Name", "Jules"),
             MockKeyValue("Company", "ACME Inc."),
@@ -67,14 +93,14 @@ def test_prepare_batch_requests_with_data():
     assert "Key: 'Company'" in req2.body.messages[1]["content"]
     assert "Value: 'ACME Inc.'" in req2.body.messages[1]["content"]
 
-def test_prepare_batch_requests_with_no_data():
+
+def test_prepare_batch_requests_with_no_data() -> None:
     """
     Test that prepare_batch_requests returns an empty list when the
     document analysis result has no key-value pairs.
     """
-    from function_app import prepare_batch_requests
     # Arrange: Create a mock analysis result with no key-value pairs
-    mock_result = MockDocumentAnalysisResult(key_value_pairs=[])
+    mock_result: Any = MockDocumentAnalysisResult(key_value_pairs=[])
     blob_name = "empty_document.pdf"
 
     # Act: Call the function
@@ -83,14 +109,14 @@ def test_prepare_batch_requests_with_no_data():
     # Assert: The result should be an empty list
     assert len(batch_requests) == 0
 
-def test_download_blob_content_success(mocker):
+
+def test_download_blob_content_success() -> None:
     """
     Test that download_blob_content successfully downloads and returns blob content.
     """
-    from function_app import download_blob_content
     # Arrange: Mock the ContainerClient and its methods
-    mock_container_client = MagicMock()
-    mock_blob_client = MagicMock()
+    mock_container_client: Any = MagicMock()
+    mock_blob_client: Any = MagicMock()
     mock_blob_content = b"This is a test blob."
 
     # Configure the mocks
@@ -106,13 +132,12 @@ def test_download_blob_content_success(mocker):
     mock_blob_client.download_blob.assert_called_once()
 
 
-def test_download_blob_content_failure(mocker):
+def test_download_blob_content_failure() -> None:
     """
     Test that download_blob_content returns None when a download error occurs.
     """
-    from function_app import download_blob_content
     # Arrange: Mock the ContainerClient to raise an exception
-    mock_container_client = MagicMock()
+    mock_container_client: Any = MagicMock()
     mock_container_client.get_blob_client.side_effect = Exception("Test Exception")
 
     # Act: Call the function

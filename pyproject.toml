@@ -133,7 +133,6 @@ reportAny = true
 reportExplicitAny = true
 reportIgnoreCommentWithoutRule = false
 reportPrivateLocalImportUsage = true
-reportUnnecessaryTypeAnnotation = true
 reportMissingParameterType = true
 reportMissingTypeArgument = true
 reportUnknownParameterType = true
@@ -172,7 +171,6 @@ reportFunctionMemberAccess = true
 reportCallInDefaultInitializer = true
 reportImplicitStringConcatenation = true
 reportImplicitOverride = true
-reportShadowedImports = true
 reportDeprecated = "warning"
 reportImportCycles = "warning"
 

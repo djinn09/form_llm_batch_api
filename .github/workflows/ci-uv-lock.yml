@@ -40,48 +40,36 @@ jobs:
           # If uv.lock is missing, uv sync will generate and install (useful for first run).
           if [ -f uv.lock ]; then
             echo "uv.lock found — running 'uv sync --locked' to install exact locked deps"
-            uv sync --locked
+            uv sync --locked --all-extras
           else
             echo "uv.lock not found — running 'uv sync' (this will create uv.lock)"
-            uv sync
-          fi
-
-      - name: Run pre-commit checks (all files)
-        env:
-          # ensure the venv is used; uvx will run tools reproducibly too
-          PATH: .venv/bin:$PATH
-        run: |
-          # Run pre-commit via uvx (ephemeral tool runner) OR the installed binary in .venv
-          if command -v uvx >/dev/null 2>&1; then
-            uvx pre-commit run --all-files
-          else
-            .venv/bin/pre-commit run --all-files
+            uv sync --all-extras
           fi
 
       - name: Ruff format check
         env:
           PATH: .venv/bin:$PATH
         run: |
-          .venv/bin/ruff format --diff --check
+          uv run ruff format --diff --check
 
       - name: Ruff lint (fail on errors)
         env:
           PATH: .venv/bin:$PATH
         run: |
-          .venv/bin/ruff check .
+          uv run ruff check .
 
       - name: Type check (basedpyright / pyright)
         env:
           PATH: .venv/bin:$PATH
         run: |
           # basedpyright or pyright should be installed in dev deps
-          .venv/bin/basedpyright --level error
+          uv run basedpyright --level error
 
       - name: Run tests with coverage
         env:
           PATH: .venv/bin:$PATH
         run: |
-          .venv/bin/pytest --maxfail=1 --disable-warnings --cov=.
+          uv run pytest --maxfail=1 --disable-warnings --cov=.
 
       - name: Upload coverage artifact (optional)
         if: always()
