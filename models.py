@@ -44,7 +44,7 @@ class BatchRequest(BaseModel):
     custom_id: str = Field(
         ...,
         description="A unique identifier for the request to match it with the response. "
-                    + "This is crucial for tracking individual requests within a batch.",
+        + "This is crucial for tracking individual requests within a batch.",
     )
     method: str = Field(
         "POST",

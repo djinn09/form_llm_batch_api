@@ -492,7 +492,7 @@ def status_check_func(
     )
 
     # TODO: Replace with a proper mechanism to get original data for comparison
-    existing_data = {"sampel": "amsmdskm"}
+    existing_data = {"sample": "amsmdskm"}
     existing_text_to_compare = next(iter(existing_data.values()))
 
     all_comparison_results: list[str] = []

@@ -51,6 +51,7 @@ repos:
     rev: 1.7.6
     hooks:
       - id: bandit
+        exclude: ^tests/
 
   - repo: https://github.com/pycqa/doc8
     rev: v1.1.1
